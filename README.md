@@ -362,37 +362,29 @@ public class Student {
 DAO包中的类主要功能是实现与数据库交互，所以我们需要大的逻辑是：1、学生类与数据库交互；2、预约是与数据库交互；3、查询书时与时与数据库交互。这里大致分为几类，等具体写接口时再去细写。还有就是注意，DAO只是与数据库交互，不能写交互组成的逻辑，这个放在service里面。我们应该站在用户的角度设计DAO接口，至于具体怎么用，后面再写。<br>
 BookDao.java
 ```java
-package com.imooc.appoint.entiy;
+package com.imooc.appoint.dao;
 
-public class Student {  
-	private Long studentId;
-	private Long password;
+import java.util.List;
+
+import org.apache.ibatis.annotations.Param;
+
+import com.imooc.appoint.entiy.Book;
+
+public interface BookDao {
+	/*
+	 * 根据id查询书
+	 * 
+	 */
+	Book queryById(long id);
+	List<Book> querySome(String name);
+	List<Book> queryAll(@Param("offset") int offset,@Param("limit") int limit);
 	
-	public Student(){
-		
-	}
-	public Student(Long studentId,Long password){
-		this.studentId=studentId;
-		this.password=password;
-	}
-	public Long getStudentId() {
-		return studentId;
-	}
-	public void setStudentId(Long studentId) {
-		this.studentId = studentId;
-	}
-	public Long getPassword() {
-		return password;
-	}
-	public void setPassword(Long password) {
-		this.password = password;
-	}
-	
-	@Override
-	public String toString() {
-		return "Student [studentId=" + studentId + ", password=" + password + "]";
-	}
+	/*减少管存数量
+	 * 用返回值可判断当前库存是否还有书
+	 */
+	 int reduceNumber(long bookId);
 }
+
 
 ```
 AppointmentDao.java
