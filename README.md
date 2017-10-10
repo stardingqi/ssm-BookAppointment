@@ -23,7 +23,7 @@
 利用命令行工具输入：mvn archetype:generate -DgroupId=cn.nize  -DarchetypeArtifactId=
 maven-archetype-webapp  -DarchetypeCatalog=internal<br>
 ## 2、创建项目包： <br>
-![image](https://github.com/nize1989/pic/blob/master/raw/10.png)
+![image](https://github.com/nize1989/pic/blob/master/raw/11.png)
 ## 3、再然后就是在pom.xml里面注入依赖，maven会自动在网站上下载。关于maven大家可以看看慕课网上的教学视频。 
 pom.xml
 ```java
