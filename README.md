@@ -725,7 +725,111 @@ public interface BookService {
 }
 ```
 大家可以看到，这个借口类中基本和DAO中的没啥区别，有区别的是某些类他是在dao上更进一步，需要多个dao类一起组织，或者在加入其它逻辑才能实现<br>
-实现类：BookServiceImpl.java<br>
+为了实现BookService的借口，我们得写BookServiceImpl类。但是想让我们想想，为了写BookServiceImpl，我们需要什么，上面我们已经写出预约成功的实体类是AppointExecution，所以当然我们得写出该类，因为该类交互service和web，对这类有点像entiy包我们管叫bto包（bto包和其他包一起存放在appoint下）。对于AppointExecution来说，作用就是预约成功后给web层提供返回的信息。（就是返回预约成功、预约失败、无库存、之类的信息）<br>
+```java
+package com.imooc.appoint.dto;
+import com.imooc.appoint.enums.AppointStateEnum;
+
+public class AppointExecution {
+
+	// 图书ID
+	private long bookId;
+
+	// 预约结果状态
+	private int state;
+
+	// 状态标识
+	private String stateInfo;  
+
+	public AppointExecution() {
+	}
+
+	// 预约失败的构造器
+	public AppointExecution(long bookId, AppointStateEnum stateEnum) {
+		this.bookId = bookId;
+		this.state = stateEnum.getState();
+		this.stateInfo = stateEnum.getStateInfo();
+	}
+
+	//set get 方法！
+	public long getBookId() {
+		return bookId;
+	}
+
+	public void setBookId(long bookId) {
+		this.bookId = bookId;
+	}
+
+	public int getState() {
+		return state;
+	}
+
+	public void setState(int state) {
+		this.state = state;
+	}
+
+	public String getStateInfo() {
+		return stateInfo;
+	}
+
+	public void setStateInfo(String stateInfo) {
+		this.stateInfo = stateInfo;
+	}
+	
+	@Override
+	public String toString() {
+		return "AppointExecution [bookId=" + bookId + ", state=" + state + ", stateInfo=" + stateInfo+"]";
+	} 
+}
+```
+除此之外，我们在预约图书时可能出现异常，例如重复预约、无库存、和其他异常，我们需要事先设计好异常类，来接收这类异常，方便处理，而不是直接报错。因此在appoint包下新建excption包，报下新建三个类：AppoinException.java;NoNumberException.java;RepeatAppoint.java<br>
+AppoinException.java
+```java
+package com.imooc.appoint.exception;
+//预约义务异常
+public class AppointException extends RuntimeException{
+	public AppointException(String message) {
+		super(message);
+	}
+
+	public AppointException(String message, Throwable cause) {
+		super(message, cause);
+	}
+}
+
+```
+NoNumberException.java
+```java
+package com.imooc.appoint.exception;
+
+//库存不足异常
+public class NoNumberException extends RuntimeException{
+	public NoNumberException(String message) {
+		super(message);
+	}
+
+	public NoNumberException(String message, Throwable cause) {
+		super(message, cause);
+	}
+
+}
+
+```
+RepeatAppoint.java
+```java
+package com.imooc.appoint.exception;
+//重复预约异常
+public class RepeatAppointException extends RuntimeException{
+	public RepeatAppointException(String message) {
+		super(message);
+	}
+
+	public RepeatAppointException(String message, Throwable cause) {
+		super(message, cause);
+	}
+}
+```
+现在可以写接口的实现类啦：BookServiceImpl.java<br>
 ```java
 package com.imooc.appoint.service.Impl;
 
@@ -811,5 +915,31 @@ public class BookServiceImpl implements BookService{
 }
 
 ```
-
+### 又到了我们写service层配置的时候！<br>
+该xml依然位于resourse下的spring包下<br>
+spring-service.xml
+```java
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/tx
+	http://www.springframework.org/schema/tx/spring-tx.xsd">
+	<!-- 扫描service包下所有使用注解的类型 -->
+	<context:component-scan base-package="com.imooc.appoint.service"></context:component-scan>
+	<!-- 配置事务管理器 -->
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<!-- 注入数据库连接池 -->
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+		<!-- 配置基于注解的声明式事务 -->
+	<tx:annotation-driven transaction-manager="transactionManager" />
+</beans>	
+```
 
