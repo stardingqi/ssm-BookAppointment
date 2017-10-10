@@ -527,24 +527,7 @@ mybatis-config.xml
 	</settings>
 </configuration>
 ```
-### 配置日志记录文件logback.xml <br>
-因为在运行时，我们经常会查看日志什么的，所以我们把这个配置进去<br>
-logback.xml
-```java
-<?xml version="1.0" encoding="UTF-8"?><!-- 我们在项目中经常会使用到日志，所以这里还有配置日志xml -->
-<configuration debug="true">
-	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
-		<!-- encoders are by default assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
-		<encoder>
-			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-		</encoder>
-	</appender>
 
-	<root level="debug">
-		<appender-ref ref="STDOUT" />
-	</root>
-</configuration>
-```
 ## 8配置实现接口的xml<br>
 我们要开始写DAO接口的实现类，因为我们配置扫描sql配置文件路径是:mapper下的xml，所有我们应该在resourse下新建mapper文件夹，在这里存放实现DAO接口的各种xml<br>
 BookDao.xml
@@ -942,4 +925,693 @@ spring-service.xml
 	<tx:annotation-driven transaction-manager="transactionManager" />
 </beans>	
 ```
+## 9web层<br>
+现在我们一起看看web层该如何组织。<br>
+在写具体的代码之前，先配置web层，在这里主要实现的作用是：<br>
+1、开启SpringMVC注解模式，可以使用@RequestMapping，@PathVariable，@ResponseBody等<br>
+2、对静态资源处理，如js，css，jpg等<br>
+3、配置jsp 显示ViewResolver，例如在controller中某个方法返回一个string类型的"login"，实际上会返回"/WEB-INF/login.jsp"<br>
+4、扫描web层 @Controller <br>
+详细见xml中每一步的注释<br>
+spring-web.xml<br>
+```java
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" 
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context.xsd
+	http://www.springframework.org/schema/mvc
+	http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd">
+		<!-- 配置SpringMVC -->
+	<!-- 1.开启SpringMVC注解模式 -->
+	<!-- 简化配置： 
+		(1)自动注册DefaultAnootationHandlerMapping,AnotationMethodHandlerAdapter 
+		(2)提供一些列：数据绑定，数字和日期的format @NumberFormat, @DateTimeFormat, xml,json默认读写支持 
+	-->
+	<mvc:annotation-driven />
+	<!-- 2.静态资源默认servlet配置
+		(1)加入对静态资源的处理：js,gif,png
+		(2)允许使用"/"做整体映射
+	 -->
+	 <mvc:default-servlet-handler/>
+	 <!-- 3.配置jsp 显示ViewResolver -->
+	 <bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+	 	<property name="viewClass" value="org.springframework.web.servlet.view.JstlView" />
+	 	<property name="prefix" value="/WEB-INF/jsp/" />
+	 	<property name="suffix" value=".jsp" />
+	 </bean>
+	 
+	 <!-- 4.扫描web相关的bean -->
+	 <context:component-scan base-package="com.imooc.appoint.web" />
+</beans>
+```
+当然我们必须修改web.xml文件，它在webapp的WEB-INF下，这个文件配置servlet，并初始化，指定扫描spring相关的配置，最后我们将所有的url都拦截下来。
+web.xml<br>
+```java
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee
+                      http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+	version="3.1" metadata-complete="true">
+   	<servlet>
+   		<servlet-name>BookAppointment-dispatcher</servlet-name>
+   		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+   		<init-param>
+   			<param-name>contextConfigLocation</param-name>
+   			<param-value>classpath:spring/spring-*.xml</param-value>
+   		</init-param>
+   	</servlet>
+  	<servlet-mapping>
+  		<servlet-name>BookAppointment-dispatcher</servlet-name>
+  		<url-pattern>/</url-pattern>
+  	</servlet-mapping>
+  
+</web-app>
+
+``` 
+因为在运行时，我们经常会查看日志什么的，所以我们把这个配置进去<br>
+logback.xml
+```java
+<?xml version="1.0" encoding="UTF-8"?><!-- 我们在项目中经常会使用到日志，所以这里还有配置日志xml -->
+<configuration debug="true">
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<!-- encoders are by default assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder -->
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<root level="debug">
+		<appender-ref ref="STDOUT" />
+	</root>
+</configuration>
+```
+最后我们开始组织我们web的逻辑，也就是具体的controller层代码的编写。<br>
+这一层中与我们的前段联系的较为紧密，大家可以边写边看效果，再调试。
+```java
+package com.imooc.appoint.web;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.ibatis.annotations.Param;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.imooc.appoint.dto.AppointExecution;
+import com.imooc.appoint.dto.Result;
+import com.imooc.appoint.entiy.Appointment;
+import com.imooc.appoint.entiy.Book;
+import com.imooc.appoint.entiy.Student;
+import com.imooc.appoint.enums.AppointStateEnum;
+import com.imooc.appoint.service.BookService;
+import com.imooc.appoint.exception.RepeatAppointException;
+import com.imooc.appoint.exception.NoNumberException;
+ 
+
+@Controller
+@RequestMapping("/books")
+public class BookController {
+	private Logger logger=LoggerFactory.getLogger(this.getClass());
+	@Autowired
+	private BookService bookService;
+	//获取图书列表
+	@RequestMapping(value="/list",method = RequestMethod.GET)
+	private String List(Model model){
+		List<Book> list = bookService.getList();
+		model.addAttribute("list", list);
+		
+		return "list";
+	}
+	//搜索是否有某图书
+	@RequestMapping(value="/search",method = RequestMethod.POST)
+	private void  search(HttpServletRequest req,HttpServletResponse resp) 
+								throws ServletException, IOException{
+		//接收页面的值
+		String name=req.getParameter("name");
+		name=name.trim();
+		//向页面传值
+		req.setAttribute("name", name);
+		req.setAttribute("list", bookService.getSomeList(name)); 
+		req.getRequestDispatcher("/WEB-INF/jsp/list.jsp").forward(req, resp); 
+	}
+	//查看某图书的详细情况
+	@RequestMapping(value = "/{bookId}/detail", method = RequestMethod.GET)
+	private String detail(@PathVariable("bookId") Long bookId, Model model){
+		if(bookId==null){
+			return "redict:/book/list";
+		}
+		Book book=bookService.getById(bookId);
+		if(book==null){
+			return "forward:/book/list"; 
+		}
+		model.addAttribute("book",book);
+		System.out.println(book);
+		return "detail";
+	}
+	//验证输入的用户名、密码是否正确
+	@RequestMapping(value="/verify", method = RequestMethod.POST, produces = {
+		"application/json; charset=utf-8" })
+	@ResponseBody
+	private Map validate(Long studentId,Long password){   //(HttpServletRequest req,HttpServletResponse resp){
+		Map resultMap=new HashMap(); 
+		Student student =null;  
+		System.out.println("验证函数"); 
+		student =bookService.validateStu(studentId,password);
+		
+		System.out.println("输入的学号、密码："+studentId+":"+password);
+		System.out.println("查询到的："+student.getStudentId()+":"+student.getPassword());
+		
+		if(student!=null){
+			System.out.println("SUCCESS");
+			resultMap.put("result", "SUCCESS");
+			return resultMap;
+		}else{ 
+			resultMap.put("result", "FAILED");
+			return resultMap;
+		}
+		
+	}
+	//执行预约的逻辑
+	@RequestMapping(value = "/{bookId}/appoint", method = RequestMethod.POST, produces = {
+	"application/json; charset=utf-8" })
+	@ResponseBody
+	private Result<AppointExecution> execute(@PathVariable("bookId") Long bookId,@RequestParam("studentId") Long studentId){
+		Result<AppointExecution> result;
+		AppointExecution execution=null;
+		
+		try{//手动try catch,在调用appoint方法时可能报错
+			execution=bookService.appoint(bookId, studentId);
+			result=new Result<AppointExecution>(true,execution); 
+				return result; 
+				
+		} catch(NoNumberException e1) {
+			execution=new AppointExecution(bookId,AppointStateEnum.NO_NUMBER);
+			result=new Result<AppointExecution>(true,execution);
+				return result;
+		}catch(RepeatAppointException e2){
+			execution=new AppointExecution(bookId,AppointStateEnum.REPEAT_APPOINT);
+			result=new Result<AppointExecution>(true,execution);
+				return result;
+		}catch (Exception e){
+			execution=new AppointExecution(bookId,AppointStateEnum.INNER_ERROR); 
+			result=new Result<AppointExecution>(true,execution);
+				return result;
+		} 
+	}
+	@RequestMapping(value ="/appoint")
+	private String appointBooks(@RequestParam("studentId") long studentId,Model model){
+		
+		List<Appointment> appointList=new ArrayList<Appointment>();
+		appointList=bookService.getAppointByStu(studentId);
+		model.addAttribute("appointList", appointList);
+		 
+		return "appointBookList";
+	}
+	
+}
+
+```
+为了把执行预约逻辑是否返回的不同信息封装起来，我们创建一个Result<T>类，它是类型T的集合。<br>
+Result.java
+```java
+package com.imooc.appoint.dto; 
+/**
+ * 封装json对象，所有返回结果都使用它
+ */
+public class Result<T> { 
+	private boolean success;// 是否成功标志
+
+	private T data;// 成功时返回的数据
+
+	private String error;// 错误信息
+
+	public Result() {
+	}
+
+	// 成功时的构造器
+	public Result(boolean success, T data) {
+		this.success = success;
+		this.data = data;
+	}
+
+	// 错误时的构造器
+	public Result(boolean success, String error) {
+		this.success = success;
+		this.error = error;
+	}
+
+	 
+	public boolean isSuccess() {
+		return success;
+	}
+
+	public void setSuccess(boolean success) {
+		this.success = success;
+	}
+
+	public T getData() {
+		return data;
+	}
+
+	public void setData(T data) {
+		this.data = data;
+	}
+
+	public String getError() {
+		return error;
+	}
+
+	public void setError(String error) {
+		this.error = error;
+	}
+
+}	
+```
+为了给web显示预约后的反馈信息，我们建立一个常量数据字典类存放这些要反馈给客户的信息<br>
+AppointStateEnum.java
+```java
+package com.imooc.appoint.enums;
+ 
+//使用枚举表述常量数据字典,我们先定义几个预约图书操作返回码的数据字典，也就是我们要返回给客户端的信息。
+public enum AppointStateEnum {
+	SUCCESS(1, "预约成功"), NO_NUMBER(0, "库存不足"), REPEAT_APPOINT(-1, "重复预约"), INNER_ERROR(-2, "系统异常");
+
+	private int state;
+
+	private String stateInfo;
+
+	private AppointStateEnum(int state, String stateInfo) {
+		this.state = state;
+		this.stateInfo = stateInfo;
+	}
+
+	public int getState() {
+		return state;
+	}
+
+	public String getStateInfo() {
+		return stateInfo;
+	}
+
+	public static AppointStateEnum stateOf(int index) {
+		for (AppointStateEnum state : values()) {
+			if (state.getState() == index) {
+				return state;
+			}
+		}
+		return null;
+	}
+}
+```
+到此为止，我们后端写的差不多了，下面是前段页面的开发，其实前段和controller中的方法开发是相互嵌套的，在写方法的同时，写js或者jsp文件。这样逻辑才能连贯。再此用bootstrap这种轻量一站式框架开发前段，能死前端技术不怎么好的童鞋也能开发出还看得过去的页面。<br>
+话不多少，我们上代码：<br>
+list.jsp
+```java
+<%@page contentType="text/html; charset=UTF-8" language="java" %>
+<%@include file="common/tag.jsp"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>图书列表</title>
+    <%@include file="common/head.jsp" %>
+</head>
+<body>
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading text-center">
+            <h2>图书列表</h2>
+        </div>
+        <form name="firstForm" action="<%= request.getContextPath()%>/books/search" method="post">
+        	<div class="panel-heading ">
+        	    <table class="table table-bookName">
+        	       <thead>
+        	       		<tr> 
+        					<th width="90" align="lift">图书名称：</th>
+        					<th width="150" align="lift">
+        						<input type="text" name="name" class="allInput" value="${name}" placeholder="输入检索书名^o^" />
+        					</th>
+        					<th> 
+        						<input type="submit" id="tabSub" value="检索" /> 
+        					</th> 
+        				</tr> 
+        	       </thead> 
+        	    </table> 
+         	</div>
+        </form>
+       
+        
+        <div class="panel-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>图书ID</th>
+                    <th>图书名称</th>
+                    <th>馆藏数量</th> 
+                    <th>详细</th>
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach items="${list}" var="sk">
+                    <tr>
+                        <td>${sk.bookId}</td>
+                        <td>${sk.name}</td>
+                        <td>${sk.number}</td>
+                        <td><a class="btn btn-info" href="/books/${sk.bookId}/detail " target="_blank">详细</a></td>
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table> 
+        </div>
+
+        
+    </div>
+</div> 
+<!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+<script src="http://apps.bdimg.com/libs/jquery/2.0.0/jquery.min.js"></script>
+
+<!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+<script src="http://apps.bdimg.com/libs/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+</body>
+</html> 
+```
+detail.java
+```java
+<%@page contentType="text/html; charset=UTF-8" language="java" %>
+<%@include file="common/tag.jsp" %>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>预约详情页</title>
+    <%@include file="common/head.jsp" %>
+</head>
+<body>
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading text-center">
+     	   	<h2>图书详情</h2>
+        </div>
+        <div class="panel-body">
+            <table class="table table-hover">
+                <thead>
+                <tr>
+                    <th>图书ID</th>
+                    <th>图书名称</th> 
+                    <th>图书简介</th>
+                    <th>剩余数量</th>
+                    <th>预约数量</th>
+                </tr>
+                </thead>
+                <tbody>
+                	<tr>
+                		<td>${book.bookId}</td>
+                		<td>${book.name}</td>
+                		<td>${book.introd}</td> 
+                		<td>${book.number }</td>
+                		<td>1</td>
+                	</tr>  
+                </tbody>
+             </table> 
+           </div>  
+           <div class="panel-body text-center">
+            	<h2 class="text-danger">  
+            		<!--用来展示预约控件-->
+            		<span class="glyphicon" id="appoint-box"></span> <!--在js里面调用这个id还可以动态显示一些其他东西，例如动态时间等（需要插件）-->
+            		 
+            		<span class="glyphicon"><a class="btn btn-primary btn-lg" href="/books/appoint?studentId=${cookie['studentId'].value}" target="_blank">查看我的已预约书籍</a></span>
+            	</h2>           <!--如何获取该页面弹出层输入的学生ID， 传给上面的url-->
+        	</div>
+    </div>	 	
+            		  
+</div>
+   <!--  登录弹出层 输入电话   -->
+<div id="varifyModal" class="modal fade"> 
+    <div class="modal-dialog"> 
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title text-center">
+                    <span class="glyphicon glyphicon-studentId"> </span>请输入学号和密码:
+                </h3>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-xs-8 col-xs-offset-2">
+                        <input type="text" name="studentId" id="studentIdKey"
+                               placeholder="填写学号^o^" class="form-control">
+                    </div>
+                    <div class="col-xs-8 col-xs-offset-2">
+                        <input type="password" name="password" id="passwordKey"
+                               placeholder="输入密码^o^" class="form-control">
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+               		<!--  验证信息 -->
+                <span id="studentMessage" class="glyphicon"> </span>
+                <button type="button" id="studentBtn" class="btn btn-success">
+                    <span class="glyphicon glyphicon-student"></span>
+                    Submit
+                </button>
+            </div>
+        </div>
+    </div> 
+</div>  
+
+</body>
+<%--jQery文件,务必在bootstrap.min.js之前引入--%>
+<script src="http://apps.bdimg.com/libs/jquery/2.0.0/jquery.min.js"></script>
+<script src="http://apps.bdimg.com/libs/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<%--使用CDN 获取公共js http://www.bootcdn.cn/--%>
+<%--jQuery Cookie操作插件--%>
+<script src="http://cdn.bootcss.com/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+<%--jQuery countDown倒计时插件--%>
+<script src="http://cdn.bootcss.com/jquery.countdown/2.1.0/jquery.countdown.min.js"></script>
+
+<script src="/resources/script/bookappointment.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+    $(function () {
+        //使用EL表达式传入参数
+        bookappointment.detail.init({
+            bookId:${book.bookId}  
+             
+        });
+    })
+</script>
+</html> 
+```
+bookappointment.js
+```javascript
+var bookappointment={
+		//封装相关ajax的url
+		URL:{
+			appoint:function(bookId,studentId){
+				return '/books/'+bookId+'/appoint?studentId='+studentId;
+			},
+			verify:function(){
+				return '/books'+'/verify';
+			}
+		},
+		
+		//验证学号和密码
+		validateStudent:function(studentId,password){
+			console.log("studentId"+studentId);
+			if(!studentId||!password){
+				return "nothing";
+			}else if(studentId.length!=10 ||isNaN(studentId)||password.length!=6 ||isNaN(password)){
+				return "typerror";
+			}else {
+				if(bookappointment.verifyWithDatabase(studentId, password)){
+					console.log("验证成功！");
+					return "success";
+				}else{
+					console.log("验证失败！");
+					return "mismatch";
+				}
+			}  
+		},
+		//将学号和用户名与数据库匹配
+		verifyWithDatabase:function(studentId,password){
+			var result=false;
+			var params={};
+			params.studentId=studentId;
+			params.password=password;
+			console.log("params.password:"+params.password);
+			var verifyUrl=bookappointment.URL.verify();
+			$.ajax({
+				type:'post',
+				url:verifyUrl,
+				data:params,
+				datatype:'josn', 
+				async:false,                       //同步调用，保证先执行result=true,后再执行return result;
+				success:function(data){
+					if(data.result=='SUCCESS'){
+						window.location.reload();
+						//弹出登录成功！
+						alert("登陆成功！");
+						result=true;
+					}else{
+						result=false;
+					}
+				}
+			});
+			console.log("我是验证结果："+result);
+			return result;
+			
+		},
+		
+		//预定图书逻辑
+		detail:{
+			//预定也初始化
+			init:function(params){
+				var bookId=params['bookId']; 
+				console.log("我是js文件！");
+				
+				var studentId=$.cookie('studentId');
+				var password=$.cookie('password');
+				if(!studentId||!password){
+					//设置弹出层属性
+					var  IdAndPasswordModal=$('#varifyModal');
+					IdAndPasswordModal.modal({
+						show: true,//显示弹出层
+	                    backdrop: 'static',//禁止位置关闭
+	                    keyboard: false//关闭键盘事件
+					});
+					$('#studentBtn').click(function (){
+						studentId=$('#studentIdKey').val();
+							console.log("studentId:"+studentId);
+						password=$('#passwordKey').val();
+							console.log("password:"+password);
+						//调用validateStudent函数验证用户id和密码。
+						var temp=bookappointment.validateStudent(studentId,password);
+						console.log(temp);
+						if(temp=="nothing"){
+							$('#studentMessage').hide().html('<label class="label label-danger">学号或密码为空!</label>').show(300);
+						}else if(temp=="typerror"){
+							$('#studentMessage').hide().html('<label class="label label-danger">格式不正确!</label>').show(300);
+						}else if(temp=="mismatch"){
+							console.log("已经调用验证函数！");
+							$('#studentMessage').hide().html('<label class="label label-danger">学号密码不匹配!</label>').show(300);
+						}else if(temp=="success"){
+							 //学号与密码匹配正确，将学号密码保存在cookie中。不设置cookie过期时间，这样即为session模式，关闭浏览器就不保存密码了。
+							$.cookie('studentId', studentId, {  path: '/books'}); 
+							$.cookie('password', password, {  path: '/books'}); 
+							// 跳转到预约逻辑 
+							var appointbox=$('#appoint-box');
+							bookappointment.appointment(bookId,studentId,appointbox);
+						}
+					}); 
+				}else{
+					var appointbox=$('#appoint-box');
+					bookappointment.appointment(bookId,studentId,appointbox);
+				} 
+			}	
+		},
+		appointment:function(bookId,studentId, node){
+			console.log("我执行预约的方法!" );
+			node.html('<button class="btn btn-primary btn-lg" id="appointmentBtn">预约</button>');
+			  
+			var appointmentUrl = bookappointment.URL.appoint(bookId,studentId);
+			console.log("appointmentUrl:"+appointmentUrl);
+			//绑定一次点击事件
+			$('#appointmentBtn').one('click', function () {
+				//执行预约请求
+				//1、先禁用请求
+				$(this).addClass('disabled');
+				//2、发送预约请求执行预约
+				$.post(appointmentUrl,{},function(result){   //Ajax强大之处，向Controller方法提出请求和返回结果在一处!
+					if(result && result['success']){         //同时还可以连续取对象的子对象！
+						var appointResult=result['data'];
+							console.log("appointResult"+appointResult);
+						var state=appointResult['state'];
+							console.log("state"+state);
+						var stateInfo=appointResult['stateInfo'];
+							console.log("stateInfo"+stateInfo);
+						//显示预约结果    把结果显示给页面，完成了jsp的工作 
+						node.html('<span class="label label-success">'+stateInfo+'</span>');
+					}       //因为公用一个node所以，用来显示“stateInfo”时就不会显示上面的“预约”
+					console.log('result'+result);
+				});
+			 });
+			
+			
+		}
+}
+```
+appointBookList.jsp
+```java
+<%@page contentType="text/html; charset=UTF-8" language="java" %>
+<%@include file="common/tag.jsp"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>预约图书列表</title>
+    <%@include file="common/head.jsp" %>
+</head>
+<body>
+<div class="container">
+    <div class="panel panel-default">
+        <div class="panel-heading text-center">
+            <h2>您已预约图书列表</h2>
+        </div>
+		<div class="panel-body">
+            <table class="table table-hover">
+                <thead>
+                <tr> 
+                    <th>预定学号</th>
+                    <th>预约时间</th>
+                    <th>图书ID</th> 
+                    <th>图书名称</th>
+                    <th>图书简介</th>
+                    <th>预约数量</th>  
+                </tr>
+                </thead>
+                <tbody>
+                <c:forEach items="${appointList}" var="sk">
+                    <tr>
+                    	<td>${sk.studentId}</td> 
+                        <td>${sk.appointTime}</td>
+                        <td>${sk.bookId}</td>
+                        <td>${sk.book.getName()}</td>
+                        <td>${sk.book.getIntrod()}</td> 
+                        <td>1</td> 
+                    </tr>
+                </c:forEach>
+                </tbody>
+            </table> 
+        </div> 
+    </div>
+</div> 
+<!-- jQuery文件。务必在bootstrap.min.js 之前引入 -->
+<script src="http://apps.bdimg.com/libs/jquery/2.0.0/jquery.min.js"></script>
+
+<!-- 最新的 Bootstrap 核心 JavaScript 文件 -->
+<script src="http://apps.bdimg.com/libs/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+</body>
+</html>
+```
+到此为止，所有的开发就已经结束，已经把所有源代码上传至github，需要的可以去下载，喜欢就给个star吧，这篇东西写了整整一个上午也不容易啊。<br>爱你们，么么哒！
+
+
+
 
