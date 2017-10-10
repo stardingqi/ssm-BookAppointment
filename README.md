@@ -6,24 +6,24 @@
 这是图书管理系统的首页，不用登陆即可查看、搜索系统有已有图书。<br>
 ![image](https://github.com/nize1989/pic/blob/master/raw/1.png)
 搜索想要预定的书：<br>
-![image]https://github.com/nize1989/pic/blob/master/raw/2.png
+![image](https://github.com/nize1989/pic/blob/master/raw/2.png)
 点击详情，进入预定页面，如果没有登陆的话会弹出登陆层，提示输入学号密码，如果用户已经在之前查看某本书的详细时已经登陆，则不会要求再登陆，这里的用户名密码与数据库验证成功后保存在cookie中，且生命周期默认与session相同，即关闭路径窗口后就失效。<br>
-![image]https://github.com/nize1989/pic/blob/master/raw/3.png
+![image](https://github.com/nize1989/pic/blob/master/raw/3.png)
 这是什么都不输入和输入格式不对时，点击submit的提示：<br>
-![image]https://github.com/nize1989/pic/blob/master/raw/4.png
-![image]https://github.com/nize1989/pic/blob/master/raw/5.png
-![image]https://github.com/nize1989/pic/blob/master/raw/6.png
+![image](https://github.com/nize1989/pic/blob/master/raw/4.png)
+![image](https://github.com/nize1989/pic/blob/master/raw/5.png)
+![image](https://github.com/nize1989/pic/blob/master/raw/6.png)
 登陆后进入预约界面，点击预约后的界面：<br>
-![image]https://github.com/nize1989/pic/blob/master/raw/7.png
+![image](https://github.com/nize1989/pic/blob/master/raw/7.png)
 如果已经对当前书预约过，点击预约会提示重复预约，如果没有库存，点击预约会提示没有库存。<br>
-![image]https://github.com/nize1989/pic/blob/master/raw/8.png
+![image](https://github.com/nize1989/pic/blob/master/raw/8.png)
 预约后点击：查看我的已预约书籍，会显示之前所有预约的信息：<br>
-![image]![image]https://github.com/nize1989/pic/blob/master/raw/9.png
+![image](https://github.com/nize1989/pic/blob/master/raw/9.png)
 ## 1、利用maven创建文件路径：<br>
 利用命令行工具输入：mvn archetype:generate -DgroupId=cn.nize  -DarchetypeArtifactId=
 maven-archetype-webapp  -DarchetypeCatalog=internal<br>
 ## 2、创建项目包： <br>
-![image]https://github.com/nize1989/pic/blob/master/raw/10.png
+![image](https://github.com/nize1989/pic/blob/master/raw/10.png)
 ## 3、再然后就是在pom.xml里面注入依赖，maven会自动在网站上下载。关于maven大家可以看看慕课网上的教学视频。 
 pom.xml
 ```java
