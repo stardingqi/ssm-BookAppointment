@@ -1,6 +1,7 @@
 # ssm-BookAppointment
 优雅整合SSM框架：SpringMVC + Spring + MyBatis（用户登陆式图书预约系统）
 小伙伴们开车了！
+![images](http://github.com/nize1989/pis/raw/master/raw/1.png)
 ## 1、利用maven创建文件路径：
 利用命令行工具输入：mvn archetype:generate -DgroupId=cn.nize  -DarchetypeArtifactId=
 maven-archetype-webapp  -DarchetypeCatalog=internal
