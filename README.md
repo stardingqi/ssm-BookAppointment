@@ -1,11 +1,12 @@
 # ssm-BookAppointment
 优雅整合SSM框架：SpringMVC + Spring + MyBatis（用户登陆式图书预约系统）
 小伙伴们开车了！
-##1、利用maven创建文件路径：
+## 1、利用maven创建文件路径：
 利用命令行工具输入：mvn archetype:generate -DgroupId=cn.nize  -DarchetypeArtifactId=
 maven-archetype-webapp  -DarchetypeCatalog=internal
-##2、创建项目包： 
-##3、再然后就是在pom.xml里面注入依赖，maven会自动在网站上下载。关于maven大家可以看看慕课网上的教学视频。 
+## 2、创建项目包： 
+## 3、再然后就是在pom.xml里面注入依赖，maven会自动在网站上下载。关于maven大家可以看看慕课网上的教学视频。 
+pom.xml
 ```java
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
@@ -170,7 +171,7 @@ maven-archetype-webapp  -DarchetypeCatalog=internal
   </build>
 </project>
 ```
-##4、做好之前的准备工作后，逻辑理顺，现在就要开始编码啦！ 
+## 4、做好之前的准备工作后，逻辑理顺，现在就要开始编码啦！<br> 
 第一个开始填充的类当然是entiy包，他是承接我们从数据库里去除数据的类，或者把该类存入数据库，在这里我们创建两个类，一个是Book包（从数据库取出书后放入该包），一个是Appointment（存放从数据库取出的预约书籍信息）。
 Book.java
 ```java
